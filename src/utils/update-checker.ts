@@ -1,9 +1,10 @@
 import latestVersion from "latest-version";
 import semver from "semver";
 import { readFileSync } from "fs";
-import { join } from "path";
+import { join, dirname } from "path";
 import { homedir } from "os";
 import { existsSync, writeFileSync, readFileSync as readFile } from "fs";
+import { fileURLToPath } from "url";
 import { logger } from "./logger.js";
 import chalk from "chalk";
 
@@ -16,9 +17,13 @@ const CACHE_FILE = join(homedir(), ".byld-cli-update-cache.json");
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 const PACKAGE_NAME = "@byldpartners/cli";
 
+// Get __dirname equivalent for ESM (same approach as index.ts)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 function getCurrentVersion(): string {
   try {
-    const packagePath = join(__dirname, "../../package.json");
+    const packagePath = join(__dirname, "../../../package.json");
     const packageJson = JSON.parse(readFileSync(packagePath, "utf-8"));
     return packageJson.version;
   } catch {
