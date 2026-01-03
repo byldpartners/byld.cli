@@ -1,6 +1,6 @@
 {
   "name": "@byldpartners/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Byld CLI - A wrapper around create-better-t-stack for building modern web applications",
   "main": "dist/index.js",
