@@ -1,0 +1,53 @@
+{
+  "name": "@byldpartners/cli",
+  "version": "0.1.2",
+  "type": "module",
+  "description": "Byld CLI - A wrapper around create-better-t-stack for building modern web applications",
+  "main": "dist/index.js",
+  "bin": {
+    "byld": "./bin/byld"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "type-check": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "cli",
+    "byld",
+    "better-t-stack",
+    "scaffolding",
+    "boilerplate"
+  ],
+  "author": "Byld",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/byldpartners/byld.cli.git"
+  },
+  "homepage": "https://byld.dev",
+  "devDependencies": {
+    "@types/inquirer": "^9.0.9",
+    "@types/node": "^25.0.3",
+    "@types/semver": "^7.7.1",
+    "typescript": "^5.3.3"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "commander": "^14.0.2",
+    "create-better-t-stack": "^3.13.2",
+    "inquirer": "^13.1.0",
+    "latest-version": "^9.0.0",
+    "semver": "^7.7.3"
+  }
+}
