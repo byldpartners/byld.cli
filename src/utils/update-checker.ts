@@ -18,7 +18,7 @@ const PACKAGE_NAME = "@byldpartners/cli";
 
 function getCurrentVersion(): string {
   try {
-    const packagePath = join(__dirname, "../package.json");
+    const packagePath = join(__dirname, "../../package.json");
     const packageJson = JSON.parse(readFileSync(packagePath, "utf-8"));
     return packageJson.version;
   } catch {
