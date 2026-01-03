@@ -2,6 +2,8 @@
   <img src="assets/images/byld-header.png" alt="Byld" width="100%">
 </div>
 
+Byld is a software agency, offering premium senior software developers and designers for innovative software products.
+
 # Byld CLI
 
 **Build better. Build faster. Build with Byld.**
@@ -118,23 +120,6 @@ Create a new project with the specified name (or be prompted for it).
 
 ### `byld help`
 
-Display help information and branding.
-
-### `byld --version`
-
-Display the current version of the CLI.
-
-## Update Notifications
-
-The CLI automatically checks for updates when you run commands. If a newer version is available, you'll see a notification like:
-
-```
-⚠  Update available: @byld/cli@1.2.0 (you have 1.1.0)
-Run: npm install -g @byld/cli@latest
-```
-
-Update checks are cached for 24 hours to avoid rate limiting.
-
 ## Custom Additions Guide
 
 ### Adding Custom GitHub Actions
@@ -161,13 +146,11 @@ The CLI will:
 
 ## What's Under the Hood?
 
-Byld CLI is a branded wrapper around [create-better-t-stack](https://www.better-t-stack.dev), providing:
+Byld CLI is a wrapper around [create-better-t-stack](https://www.better-t-stack.dev), providing:
 
 - Curated preset configurations
-- Byld branding and marketing
 - Custom additions support
-- Automatic update notifications
-- Seamless integration with better-t-stack
+- Integration with better-t-stack
 
 ## Contributing
 
