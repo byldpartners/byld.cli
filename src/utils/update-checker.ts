@@ -14,7 +14,7 @@ interface UpdateCache {
 
 const CACHE_FILE = join(homedir(), ".byld-cli-update-cache.json");
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
-const PACKAGE_NAME = "@byld/cli";
+const PACKAGE_NAME = "@byldpartners/cli";
 
 function getCurrentVersion(): string {
   try {

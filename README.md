@@ -15,19 +15,19 @@ Visit [https://byld.dev](https://byld.dev) to learn more about our software agen
 Install the Byld CLI globally using npm:
 
 ```bash
-npm install -g @byld/cli
+npm install -g @byldpartners/cli
 ```
 
 Or using pnpm:
 
 ```bash
-pnpm add -g @byld/cli
+pnpm add -g @byldpartners/cli
 ```
 
 Or using bun:
 
 ```bash
-bun add -g @byld/cli
+bun add -g @byldpartners/cli
 ```
 
 ## Usage
@@ -90,7 +90,7 @@ The CLI will prompt you interactively for these additions.
 
 ```bash
 # Install the CLI
-npm install -g @byld/cli
+npm install -g @byldpartners/cli
 
 # Create a new project
 byld create my-awesome-app

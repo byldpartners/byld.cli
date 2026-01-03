@@ -1,5 +1,5 @@
 {
-  "name": "@byld/cli",
+  "name": "@byldpartners/cli",
   "version": "0.1.0",
   "type": "module",
   "description": "Byld CLI - A wrapper around create-better-t-stack for building modern web applications",
