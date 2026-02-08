@@ -6,6 +6,36 @@ import { logger } from "../utils/logger.js";
 import { applyCustomAdditions, CustomAdditions } from "../utils/custom-additions.js";
 import chalk from "chalk";
 
+type CreateResult =
+  | { ok: true; value: { projectDirectory: string; relativePath: string } }
+  | { ok: false; error: string }
+  | { success: true; projectDirectory: string; relativePath: string }
+  | { success: false; error: string; projectDirectory: string; relativePath: string };
+
+function getCreateResultData(result: CreateResult): {
+  projectDirectory: string;
+  relativePath: string;
+  success: boolean;
+  error?: string;
+} {
+  if ("ok" in result) {
+    if (result.ok) return { ...result.value, success: true };
+    return { projectDirectory: "", relativePath: "", success: false, error: result.error };
+  }
+  if (result.success)
+    return {
+      projectDirectory: result.projectDirectory,
+      relativePath: result.relativePath,
+      success: true,
+    };
+  return {
+    projectDirectory: result.projectDirectory,
+    relativePath: result.relativePath,
+    success: false,
+    error: result.error,
+  };
+}
+
 async function safePrompt<T extends Record<string, any>>(prompt: any): Promise<T> {
   try {
     return await inquirer.prompt<T>(prompt) as T;
@@ -54,11 +84,12 @@ export async function createCommand(projectName?: string): Promise<void> {
 
   try {
     const { create } = await import("create-better-t-stack");
-    const result = await create(config.projectName || "my-app", {
+    const raw = await create(config.projectName || "my-app", {
       ...config,
       disableAnalytics: true,
       renderTitle: false,
     });
+    const result = getCreateResultData(raw as CreateResult);
 
     if (result.success) {
       logger.success(`Project created at: ${chalk.cyan(result.projectDirectory)}`);
