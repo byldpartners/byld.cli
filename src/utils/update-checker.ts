@@ -92,7 +92,7 @@ export async function checkForUpdates(): Promise<void> {
       `Update available: ${chalk.cyan(PACKAGE_NAME)}@${chalk.cyan(latest)} (you have ${chalk.gray(currentVersion)})`
     );
     logger.info(
-      `Run: ${chalk.cyan(`npm install -g ${PACKAGE_NAME}@latest`)}`
+      `Run: ${chalk.cyan(`pnpm add -g ${PACKAGE_NAME}@latest`)}`
     );
     console.log();
   }

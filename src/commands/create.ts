@@ -104,7 +104,7 @@ export async function createCommand(projectName?: string): Promise<void> {
       if (uiOptions) {
         scaffoldUIPackage(result.projectDirectory, {
           ...uiOptions,
-          packageManager: config.packageManager || "npm",
+          packageManager: "pnpm",
           install: config.install ?? true,
         });
       }
@@ -113,9 +113,9 @@ export async function createCommand(projectName?: string): Promise<void> {
       logger.info("Next steps:");
       logger.cyan(`  cd ${result.relativePath}`);
       if (!config.install) {
-        logger.cyan(`  ${config.packageManager || "npm"} install`);
+        logger.cyan(`  pnpm install`);
       }
-      logger.cyan(`  ${config.packageManager || "npm"} run dev`);
+      logger.cyan(`  pnpm run dev`);
       console.log();
     } else {
       logger.error(`Failed to create project: ${result.error}`);
@@ -154,11 +154,10 @@ async function getCustomConfig(projectName?: string): Promise<CreateInput> {
     database: "none" | "sqlite" | "postgres" | "mysql" | "mongodb";
     orm?: "none" | "drizzle" | "prisma" | "mongoose";
     auth: "none" | "better-auth" | "clerk";
-    packageManager: "npm" | "pnpm" | "bun";
     install: boolean;
     git: boolean;
   }
-  
+
   const answers = await safePrompt<CustomConfigAnswers>([
     {
       type: "input",
@@ -220,16 +219,6 @@ async function getCustomConfig(projectName?: string): Promise<CreateInput> {
       ],
     },
     {
-      type: "rawlist",
-      name: "packageManager",
-      message: "Select package manager:",
-      choices: [
-        { name: "npm", value: "npm" },
-        { name: "pnpm", value: "pnpm" },
-        { name: "bun", value: "bun" },
-      ],
-    },
-    {
       type: "confirm",
       name: "install",
       message: "Install dependencies?",
@@ -250,7 +239,7 @@ async function getCustomConfig(projectName?: string): Promise<CreateInput> {
     database: answers.database,
     orm: answers.orm || "none",
     auth: answers.auth,
-    packageManager: answers.packageManager,
+    packageManager: "pnpm",
     install: answers.install,
     git: answers.git,
     yes: true,
@@ -311,7 +300,7 @@ async function promptCustomAdditions(): Promise<CustomAdditions | null> {
     {
       type: "confirm",
       name: "addPackages",
-      message: "Add custom npm packages?",
+      message: "Add custom packages?",
       default: false,
     },
   ]);

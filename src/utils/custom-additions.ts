@@ -122,8 +122,7 @@ async function addPackages(
 
     if (install) {
       logger.info("Installing additional packages...");
-      const packageManager = packageJson.packageManager?.split("@")[0] || "npm";
-      execSync(`${packageManager} install`, {
+      execSync(`pnpm install`, {
         cwd: projectDirectory,
         stdio: "inherit",
       });

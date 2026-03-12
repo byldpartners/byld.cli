@@ -18,7 +18,7 @@ export interface CreateInput {
   addons?: string[];
   examples?: string[];
   git?: boolean;
-  packageManager?: "npm" | "pnpm" | "bun";
+  packageManager?: "pnpm";
   install?: boolean;
   dbSetup?: string;
   backend?: string;

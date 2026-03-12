@@ -10,17 +10,18 @@ jobs:
     env:
       working-directory: ./apps/mobile
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20.x
+          node-version: 24
+      - uses: pnpm/action-setup@v4
       - name: "\U0001F3D7 Expose git commit data"
         uses: jcputney/git-commit-data-action@v2
       - name: "\U0001F4E6 Install Packages"
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
         working-directory: ${{ env.working-directory }}
       - name: Generate dotenv file
         working-directory: ${{ env.working-directory }}
