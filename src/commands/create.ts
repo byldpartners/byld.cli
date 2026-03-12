@@ -194,7 +194,8 @@ async function getCustomConfig(projectName?: string): Promise<CreateInput> {
     git: boolean;
   }
 
-  const answers = await safePrompt<CustomConfigAnswers>([
+  // Prompt for project name and frontend first so we can build dynamic backend choices
+  const { projectName: answeredProjectName, frontend } = await safePrompt<Pick<CustomConfigAnswers, "projectName" | "frontend">>([
     {
       type: "input",
       name: "projectName",
@@ -207,18 +208,35 @@ async function getCustomConfig(projectName?: string): Promise<CreateInput> {
       message: "Select frontend framework(s):",
       choices: toChoices(FRONTEND_VALUES, true),
     },
+  ]);
+
+  // Build backend choices dynamically: include fullstack options for selected frontends
+  const fullstackFrontends: Record<string, string> = {
+    "tanstack-start": "Fullstack Tanstack Start",
+    next: "Fullstack Next.js",
+    nuxt: "Fullstack Nuxt",
+    astro: "Fullstack Astro",
+  };
+  const backendChoices = [
+    ...toChoices(BACKEND_VALUES.filter((v) => v !== "self")),
+    ...frontend
+      .filter((f) => f in fullstackFrontends)
+      .map((f) => ({ name: fullstackFrontends[f], value: `self-${f}` })),
+  ];
+
+  const remainingAnswers = await safePrompt<Omit<CustomConfigAnswers, "projectName" | "frontend">>([
     {
       type: "rawlist",
       name: "backend",
       message: "Select backend framework:",
-      choices: toChoices(BACKEND_VALUES),
+      choices: backendChoices,
     },
     {
       type: "rawlist",
       name: "runtime",
       message: "Select runtime:",
       choices: toChoices(RUNTIME_VALUES),
-      when: (answers: Partial<CustomConfigAnswers>) => answers.backend !== "none",
+      when: (answers: Partial<CustomConfigAnswers>) => answers.backend !== "none" && !answers.backend?.startsWith("self-"),
     },
     {
       type: "rawlist",
@@ -282,7 +300,7 @@ async function getCustomConfig(projectName?: string): Promise<CreateInput> {
       name: "serverDeploy",
       message: "Select server deployment target:",
       choices: toChoices(SERVER_DEPLOY_VALUES),
-      when: (answers: Partial<CustomConfigAnswers>) => answers.backend !== "none",
+      when: (answers: Partial<CustomConfigAnswers>) => answers.backend !== "none" && !answers.backend?.startsWith("self-"),
     },
     {
       type: "confirm",
@@ -298,11 +316,16 @@ async function getCustomConfig(projectName?: string): Promise<CreateInput> {
     },
   ]);
 
+  const answers = { projectName: answeredProjectName, frontend, ...remainingAnswers };
+
+  // Map self-* backend values to "self" for the create-better-t-stack API
+  const backendValue = answers.backend?.startsWith("self-") ? "self" : (answers.backend || "none");
+
   return {
     projectName: answers.projectName,
     frontend: answers.frontend.length > 0 ? answers.frontend : undefined,
-    backend: answers.backend || "none",
-    runtime: answers.runtime || undefined,
+    backend: backendValue,
+    runtime: answers.backend?.startsWith("self-") ? undefined : (answers.runtime || undefined),
     api: answers.api || undefined,
     database: answers.database,
     orm: answers.orm || "none",
