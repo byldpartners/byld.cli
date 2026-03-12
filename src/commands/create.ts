@@ -167,7 +167,6 @@ async function getCustomConfig(projectName?: string): Promise<CreateInput> {
     webDeploy: string;
     serverDeploy: string;
     install: boolean;
-    git: boolean;
   }
 
   // Prompt for project name and frontend first so we can build dynamic backend choices
@@ -284,12 +283,6 @@ async function getCustomConfig(projectName?: string): Promise<CreateInput> {
       message: "Install dependencies?",
       default: true,
     },
-    {
-      type: "confirm",
-      name: "git",
-      message: "Initialize git repository?",
-      default: true,
-    },
   ]);
 
   const answers = { projectName: answeredProjectName, frontend, ...remainingAnswers };
@@ -314,7 +307,7 @@ async function getCustomConfig(projectName?: string): Promise<CreateInput> {
     serverDeploy: answers.serverDeploy,
     packageManager: "pnpm",
     install: answers.install,
-    git: answers.git,
+    git: false,
     disableAnalytics: true,
     renderTitle: false,
   };
