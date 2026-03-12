@@ -44,6 +44,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@better-t-stack/types": "^3.13.2",
     "chalk": "^5.6.2",
     "commander": "^14.0.2",
     "create-better-t-stack": "^3.13.2",

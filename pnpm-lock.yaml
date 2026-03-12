@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@better-t-stack/types':
+        specifier: ^3.13.2
+        version: 3.13.2
       chalk:
         specifier: ^5.6.2
         version: 5.6.2

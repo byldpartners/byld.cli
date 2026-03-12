@@ -10,15 +10,15 @@ export interface CreateInput {
   yes?: boolean;
   yolo?: boolean;
   verbose?: boolean;
-  database?: "none" | "sqlite" | "postgres" | "mysql" | "mongodb";
-  orm?: "none" | "drizzle" | "prisma" | "mongoose";
-  auth?: "better-auth" | "clerk" | "none";
-  payments?: "polar" | "none";
+  database?: string;
+  orm?: string;
+  auth?: string;
+  payments?: string;
   frontend?: string[];
   addons?: string[];
   examples?: string[];
   git?: boolean;
-  packageManager?: "pnpm";
+  packageManager?: string;
   install?: boolean;
   dbSetup?: string;
   backend?: string;
@@ -26,9 +26,8 @@ export interface CreateInput {
   api?: string;
   webDeploy?: string;
   serverDeploy?: string;
-  directoryConflict?: "merge" | "overwrite" | "increment" | "error";
+  directoryConflict?: string;
   renderTitle?: boolean;
   disableAnalytics?: boolean;
   manualDb?: boolean;
 }
-

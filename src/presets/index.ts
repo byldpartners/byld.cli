@@ -5,8 +5,8 @@ export const presets: Preset[] = [
     name: "Full-Stack React",
     description: "React + Hono + Drizzle + SQLite + Better Auth - Perfect for full-stack React applications",
     config: {
-      yes: true,
-      frontend: ["react"],
+
+      frontend: ["tanstack-router"],
       backend: "hono",
       database: "sqlite",
       orm: "drizzle",
@@ -22,7 +22,7 @@ export const presets: Preset[] = [
     name: "Next.js Stack",
     description: "Next.js + Hono + Prisma + PostgreSQL + Clerk - Enterprise-ready Next.js applications",
     config: {
-      yes: true,
+
       frontend: ["next"],
       backend: "hono",
       database: "postgres",
@@ -39,7 +39,7 @@ export const presets: Preset[] = [
     name: "T3 Stack",
     description: "Next.js + tRPC + Prisma + NextAuth - The popular T3 stack configuration",
     config: {
-      yes: true,
+
       frontend: ["next"],
       backend: "hono",
       database: "postgres",
@@ -56,7 +56,7 @@ export const presets: Preset[] = [
     name: "Minimal Stack",
     description: "TanStack Router + Hono + SQLite - Lightweight and fast, perfect for small projects",
     config: {
-      yes: true,
+
       frontend: ["tanstack-router"],
       backend: "hono",
       database: "sqlite",

@@ -4,8 +4,36 @@ import { CreateInput } from "../types.js";
 import { displayExitMessage } from "../utils/branding.js";
 import { logger } from "../utils/logger.js";
 import { applyCustomAdditions, CustomAdditions } from "../utils/custom-additions.js";
-import { scaffoldUIPackage, UIPackageOptions, UIPlatform } from "../utils/ui-package.js";
+import { scaffoldUIPackage, UIPlatform } from "../utils/ui-package.js";
 import chalk from "chalk";
+import {
+  FRONTEND_VALUES,
+  BACKEND_VALUES,
+  RUNTIME_VALUES,
+  API_VALUES,
+  DATABASE_VALUES,
+  ORM_VALUES,
+  DATABASE_SETUP_VALUES,
+  AUTH_VALUES,
+  PAYMENTS_VALUES,
+  ADDONS_VALUES,
+  EXAMPLES_VALUES,
+  WEB_DEPLOY_VALUES,
+  SERVER_DEPLOY_VALUES,
+} from "@better-t-stack/types";
+
+function formatDisplayName(value: string): string {
+  return value
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function toChoices(values: readonly string[], excludeNone = false) {
+  return values
+    .filter((v) => (excludeNone ? v !== "none" : true))
+    .map((v) => ({ name: v === "none" ? "None" : formatDisplayName(v), value: v }));
+}
 
 type CreateResult =
   | { ok: true; value: { projectDirectory: string; relativePath: string } }
@@ -151,9 +179,17 @@ async function getCustomConfig(projectName?: string): Promise<CreateInput> {
     projectName: string;
     frontend: string[];
     backend: string;
-    database: "none" | "sqlite" | "postgres" | "mysql" | "mongodb";
-    orm?: "none" | "drizzle" | "prisma" | "mongoose";
-    auth: "none" | "better-auth" | "clerk";
+    runtime: string;
+    api: string;
+    database: string;
+    orm: string;
+    dbSetup: string;
+    auth: string;
+    payments: string;
+    addons: string[];
+    examples: string[];
+    webDeploy: string;
+    serverDeploy: string;
     install: boolean;
     git: boolean;
   }
@@ -169,54 +205,84 @@ async function getCustomConfig(projectName?: string): Promise<CreateInput> {
       type: "checkbox",
       name: "frontend",
       message: "Select frontend framework(s):",
-      choices: [
-        { name: "Next.js", value: "next" },
-        { name: "React", value: "react" },
-        { name: "TanStack Router", value: "tanstack-router" },
-      ],
+      choices: toChoices(FRONTEND_VALUES, true),
     },
     {
       type: "rawlist",
       name: "backend",
       message: "Select backend framework:",
-      choices: [
-        { name: "Hono", value: "hono" },
-        { name: "None", value: "none" },
-      ],
+      choices: toChoices(BACKEND_VALUES),
+    },
+    {
+      type: "rawlist",
+      name: "runtime",
+      message: "Select runtime:",
+      choices: toChoices(RUNTIME_VALUES),
+      when: (answers: Partial<CustomConfigAnswers>) => answers.backend !== "none",
+    },
+    {
+      type: "rawlist",
+      name: "api",
+      message: "Select API layer:",
+      choices: toChoices(API_VALUES),
+      when: (answers: Partial<CustomConfigAnswers>) => answers.backend !== "none",
     },
     {
       type: "rawlist",
       name: "database",
       message: "Select database:",
-      choices: [
-        { name: "None", value: "none" },
-        { name: "SQLite", value: "sqlite" },
-        { name: "PostgreSQL", value: "postgres" },
-        { name: "MySQL", value: "mysql" },
-        { name: "MongoDB", value: "mongodb" },
-      ],
+      choices: toChoices(DATABASE_VALUES),
     },
     {
       type: "rawlist",
       name: "orm",
       message: "Select ORM:",
-      choices: [
-        { name: "None", value: "none" },
-        { name: "Drizzle", value: "drizzle" },
-        { name: "Prisma", value: "prisma" },
-        { name: "Mongoose", value: "mongoose" },
-      ],
+      choices: toChoices(ORM_VALUES),
+      when: (answers: Partial<CustomConfigAnswers>) => answers.database !== "none",
+    },
+    {
+      type: "rawlist",
+      name: "dbSetup",
+      message: "Select database setup:",
+      choices: toChoices(DATABASE_SETUP_VALUES),
       when: (answers: Partial<CustomConfigAnswers>) => answers.database !== "none",
     },
     {
       type: "rawlist",
       name: "auth",
       message: "Select authentication:",
-      choices: [
-        { name: "None", value: "none" },
-        { name: "Better Auth", value: "better-auth" },
-        { name: "Clerk", value: "clerk" },
-      ],
+      choices: toChoices(AUTH_VALUES),
+    },
+    {
+      type: "rawlist",
+      name: "payments",
+      message: "Select payments:",
+      choices: toChoices(PAYMENTS_VALUES),
+    },
+    {
+      type: "checkbox",
+      name: "addons",
+      message: "Select addons:",
+      choices: toChoices(ADDONS_VALUES, true),
+    },
+    {
+      type: "checkbox",
+      name: "examples",
+      message: "Include example apps:",
+      choices: toChoices(EXAMPLES_VALUES, true),
+    },
+    {
+      type: "rawlist",
+      name: "webDeploy",
+      message: "Select web deployment target:",
+      choices: toChoices(WEB_DEPLOY_VALUES),
+    },
+    {
+      type: "rawlist",
+      name: "serverDeploy",
+      message: "Select server deployment target:",
+      choices: toChoices(SERVER_DEPLOY_VALUES),
+      when: (answers: Partial<CustomConfigAnswers>) => answers.backend !== "none",
     },
     {
       type: "confirm",
@@ -234,15 +300,22 @@ async function getCustomConfig(projectName?: string): Promise<CreateInput> {
 
   return {
     projectName: answers.projectName,
-    frontend: answers.frontend,
-    backend: answers.backend,
+    frontend: answers.frontend.length > 0 ? answers.frontend : undefined,
+    backend: answers.backend || "none",
+    runtime: answers.runtime || undefined,
+    api: answers.api || undefined,
     database: answers.database,
     orm: answers.orm || "none",
+    dbSetup: answers.dbSetup || undefined,
     auth: answers.auth,
+    payments: answers.payments,
+    addons: answers.addons && answers.addons.length > 0 ? answers.addons : undefined,
+    examples: answers.examples && answers.examples.length > 0 ? answers.examples : undefined,
+    webDeploy: answers.webDeploy,
+    serverDeploy: answers.serverDeploy,
     packageManager: "pnpm",
     install: answers.install,
     git: answers.git,
-    yes: true,
     disableAnalytics: true,
     renderTitle: false,
   };
