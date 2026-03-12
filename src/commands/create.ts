@@ -86,6 +86,7 @@ export async function createCommand(projectName?: string): Promise<void> {
     const result = await create(config.projectName || "my-app", {
       ...config,
       yes: true,
+      yolo: true,
       disableAnalytics: true,
       renderTitle: false,
     });
