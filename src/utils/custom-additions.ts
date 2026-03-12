@@ -1,11 +1,16 @@
-import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync } from "fs";
-import { join } from "path";
+import { readFileSync, writeFileSync, existsSync, copyFileSync, mkdirSync, readdirSync, chmodSync } from "fs";
+import { join, dirname } from "path";
 import { execSync } from "child_process";
+import { fileURLToPath } from "url";
 import { logger } from "./logger.js";
 import chalk from "chalk";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 export interface CustomAdditions {
   githubActions?: string[];
+  mobileActions?: boolean;
   packages?: string[];
   installPackages?: boolean;
 }
@@ -14,11 +19,15 @@ export async function applyCustomAdditions(
   projectDirectory: string,
   additions: CustomAdditions
 ): Promise<void> {
-  if (!additions.githubActions && !additions.packages) {
+  if (!additions.githubActions && !additions.mobileActions && !additions.packages) {
     return;
   }
 
   logger.info("Applying custom additions...");
+
+  if (additions.mobileActions) {
+    await addMobileActions(projectDirectory);
+  }
 
   if (additions.githubActions && additions.githubActions.length > 0) {
     await addGitHubActions(projectDirectory, additions.githubActions);
@@ -122,6 +131,58 @@ async function addPackages(
     }
   } catch (error) {
     logger.error(`Failed to add packages: ${error}`);
+  }
+}
+
+async function addMobileActions(projectDirectory: string): Promise<void> {
+  // Templates are in src/templates relative to the compiled dist/ output
+  const templatesDir = join(__dirname, "..", "src", "templates", "mobile-actions");
+
+  // Fallback: when running from source (dev mode)
+  const fallbackDir = join(__dirname, "..", "templates", "mobile-actions");
+  const sourceDir = existsSync(templatesDir) ? templatesDir : fallbackDir;
+
+  if (!existsSync(sourceDir)) {
+    logger.error("Mobile actions templates not found");
+    return;
+  }
+
+  try {
+    // Copy workflow files
+    const workflowsDir = join(projectDirectory, ".github", "workflows");
+    mkdirSync(workflowsDir, { recursive: true });
+
+    const workflowFiles = readdirSync(sourceDir).filter((f) => f.endsWith(".yml"));
+    for (const file of workflowFiles) {
+      copyFileSync(join(sourceDir, file), join(workflowsDir, file));
+      logger.success(`Added workflow: ${chalk.cyan(file)}`);
+    }
+
+    // Copy helper scripts
+    const scriptsSource = join(sourceDir, "scripts");
+    if (existsSync(scriptsSource)) {
+      const scriptsDir = join(projectDirectory, ".github", "scripts");
+      mkdirSync(scriptsDir, { recursive: true });
+
+      const scriptFiles = readdirSync(scriptsSource);
+      for (const file of scriptFiles) {
+        const dest = join(scriptsDir, file);
+        copyFileSync(join(scriptsSource, file), dest);
+        if (file.endsWith(".sh")) {
+          chmodSync(dest, 0o755);
+        }
+        logger.success(`Added script: ${chalk.cyan(file)}`);
+      }
+    }
+
+    logger.info("Mobile actions require these GitHub secrets:");
+    logger.cyan("  EXPO_TOKEN          - Expo access token");
+    logger.cyan("  API_URL_DEV         - Development API URL");
+    logger.cyan("  API_URL_STAGE       - Staging API URL");
+    logger.cyan("  API_URL_PROD        - Production API URL");
+    logger.gray("  Add any additional EXPO_PUBLIC_* vars to the environ JSON in each workflow");
+  } catch (error) {
+    logger.error(`Failed to add mobile actions: ${error}`);
   }
 }
 

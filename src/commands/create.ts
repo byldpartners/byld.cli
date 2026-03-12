@@ -4,6 +4,7 @@ import { CreateInput } from "../types.js";
 import { displayExitMessage } from "../utils/branding.js";
 import { logger } from "../utils/logger.js";
 import { applyCustomAdditions, CustomAdditions } from "../utils/custom-additions.js";
+import { scaffoldUIPackage, UIPackageOptions, UIPlatform } from "../utils/ui-package.js";
 import chalk from "chalk";
 
 type CreateResult =
@@ -96,6 +97,16 @@ export async function createCommand(projectName?: string): Promise<void> {
 
       if (customAdditions.githubActions || customAdditions.packages) {
         await applyCustomAdditions(result.projectDirectory, customAdditions);
+      }
+
+      // Prompt for UI package
+      const uiOptions = await promptUIPackage();
+      if (uiOptions) {
+        scaffoldUIPackage(result.projectDirectory, {
+          ...uiOptions,
+          packageManager: config.packageManager || "npm",
+          install: config.install ?? true,
+        });
       }
 
       console.log();
@@ -264,6 +275,16 @@ async function promptCustomAdditions(): Promise<CustomAdditions | null> {
 
   const additions: CustomAdditions = {};
 
+  const { addMobileActions } = await safePrompt<{ addMobileActions: boolean }>([
+    {
+      type: "confirm",
+      name: "addMobileActions",
+      message: "Add mobile CI/CD actions (EAS Build, OTA staging/production)?",
+      default: false,
+    },
+  ]);
+  additions.mobileActions = addMobileActions;
+
   const { addActions } = await safePrompt<{ addActions: boolean }>([
     {
       type: "confirm",
@@ -319,5 +340,33 @@ async function promptCustomAdditions(): Promise<CustomAdditions | null> {
   }
 
   return additions;
+}
+
+async function promptUIPackage(): Promise<{ platform: UIPlatform } | null> {
+  const { addUI } = await safePrompt<{ addUI: boolean }>([
+    {
+      type: "confirm",
+      name: "addUI",
+      message: "Add a UI package (@byldpartners/ui) for building shared components?",
+      default: false,
+    },
+  ]);
+
+  if (!addUI) return null;
+
+  const { platform } = await safePrompt<{ platform: UIPlatform }>([
+    {
+      type: "rawlist",
+      name: "platform",
+      message: "Which platforms will this UI package target?",
+      choices: [
+        { name: "Web only (React + Tailwind)", value: "web" },
+        { name: "Native only (React Native + Expo)", value: "native" },
+        { name: "Both web and native", value: "both" },
+      ],
+    },
+  ]);
+
+  return { platform };
 }
 

@@ -2,6 +2,7 @@
 
 import { Command } from "commander";
 import { createCommand } from "./commands/create.js";
+import { setupAgentCommand } from "./commands/setup-agent.js";
 import { checkForUpdates } from "./utils/update-checker.js";
 import { displayBranding, displayExitMessage, getBrandingText } from "./utils/branding.js";
 import { readFileSync } from "fs";
@@ -51,6 +52,16 @@ program
     displayBranding();
     await checkForUpdates();
     await createCommand(projectName);
+  });
+
+program
+  .command("setup-agent")
+  .alias("sa")
+  .description("Interactively set up Claude Code agent rules, hooks, and MCP configs")
+  .action(async () => {
+    displayBranding();
+    await checkForUpdates();
+    await setupAgentCommand();
   });
 
 program
