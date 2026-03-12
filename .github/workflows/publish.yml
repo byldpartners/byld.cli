@@ -41,17 +41,18 @@ jobs:
       - name: Build
         run: pnpm run build
 
-      - name: Bump version and push changes and tags
+      - name: Bump version
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          npm version ${{ github.event.inputs.version }}
-          git add .
-          git commit -m "chore: bump version to ${{ github.event.inputs.version }} [skip ci]"
-          git push origin HEAD:main --follow-tags
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npm version ${{ github.event.inputs.version }} -m "chore: bump version to %s [skip ci]"
 
       - name: Publish to npm
         run: npm publish --access public
+
+      - name: Push changes and tags
+        run: |
+          git push origin HEAD:main --follow-tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
