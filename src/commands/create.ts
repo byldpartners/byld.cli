@@ -91,11 +91,15 @@ export async function createCommand(projectName?: string): Promise<void> {
       renderTitle: false,
     });
 
+    // Unwrap the result — create-better-t-stack may return either:
+    //   { success, projectDirectory, relativePath, error }
+    //   { status: "ok", value: { success, projectDirectory, relativePath, ... } }
     const raw = (result ?? {}) as Record<string, unknown>;
-    const success = raw.success === true || raw.ok === true;
-    const projectDirectory = (raw.projectDirectory as string) || ((raw as any).value?.projectDirectory as string) || "";
-    const relativePath = (raw.relativePath as string) || ((raw as any).value?.relativePath as string) || "";
-    const error = (raw.error as string) || undefined;
+    const inner = (raw.status === "ok" && raw.value ? raw.value : raw) as Record<string, unknown>;
+    const success = inner.success === true;
+    const projectDirectory = (inner.projectDirectory as string) || "";
+    const relativePath = (inner.relativePath as string) || "";
+    const error = (inner.error as string) || undefined;
 
     if (success && projectDirectory) {
       logger.success(`Project created at: ${chalk.cyan(projectDirectory)}`);
