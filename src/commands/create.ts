@@ -35,36 +35,6 @@ function toChoices(values: readonly string[], excludeNone = false) {
     .map((v) => ({ name: v === "none" ? "None" : formatDisplayName(v), value: v }));
 }
 
-type CreateResult =
-  | { ok: true; value: { projectDirectory: string; relativePath: string } }
-  | { ok: false; error: string }
-  | { success: true; projectDirectory: string; relativePath: string }
-  | { success: false; error: string; projectDirectory: string; relativePath: string };
-
-function getCreateResultData(result: CreateResult): {
-  projectDirectory: string;
-  relativePath: string;
-  success: boolean;
-  error?: string;
-} {
-  if ("ok" in result) {
-    if (result.ok) return { ...result.value, success: true };
-    return { projectDirectory: "", relativePath: "", success: false, error: result.error };
-  }
-  if (result.success)
-    return {
-      projectDirectory: result.projectDirectory,
-      relativePath: result.relativePath,
-      success: true,
-    };
-  return {
-    projectDirectory: result.projectDirectory,
-    relativePath: result.relativePath,
-    success: false,
-    error: result.error,
-  };
-}
-
 async function safePrompt<T extends Record<string, any>>(prompt: any): Promise<T> {
   try {
     return await inquirer.prompt<T>(prompt) as T;
@@ -113,24 +83,30 @@ export async function createCommand(projectName?: string): Promise<void> {
 
   try {
     const { create } = await import("create-better-t-stack");
-    const raw = await create(config.projectName || "my-app", {
+    const result = await create(config.projectName || "my-app", {
       ...config,
+      yes: true,
       disableAnalytics: true,
       renderTitle: false,
     });
-    const result = getCreateResultData(raw as CreateResult);
 
-    if (result.success) {
-      logger.success(`Project created at: ${chalk.cyan(result.projectDirectory)}`);
+    const raw = (result ?? {}) as Record<string, unknown>;
+    const success = raw.success === true || raw.ok === true;
+    const projectDirectory = (raw.projectDirectory as string) || ((raw as any).value?.projectDirectory as string) || "";
+    const relativePath = (raw.relativePath as string) || ((raw as any).value?.relativePath as string) || "";
+    const error = (raw.error as string) || undefined;
+
+    if (success && projectDirectory) {
+      logger.success(`Project created at: ${chalk.cyan(projectDirectory)}`);
 
       if (customAdditions.githubActions || customAdditions.packages) {
-        await applyCustomAdditions(result.projectDirectory, customAdditions);
+        await applyCustomAdditions(projectDirectory, customAdditions);
       }
 
       // Prompt for UI package
       const uiOptions = await promptUIPackage();
       if (uiOptions) {
-        scaffoldUIPackage(result.projectDirectory, {
+        scaffoldUIPackage(projectDirectory, {
           ...uiOptions,
           packageManager: "pnpm",
           install: config.install ?? true,
@@ -139,14 +115,14 @@ export async function createCommand(projectName?: string): Promise<void> {
 
       console.log();
       logger.info("Next steps:");
-      logger.cyan(`  cd ${result.relativePath}`);
+      logger.cyan(`  cd ${relativePath}`);
       if (!config.install) {
         logger.cyan(`  pnpm install`);
       }
       logger.cyan(`  pnpm run dev`);
       console.log();
     } else {
-      logger.error(`Failed to create project: ${result.error}`);
+      logger.error(`Failed to create project: ${error || JSON.stringify(raw)}`);
       process.exit(1);
     }
   } catch (error) {

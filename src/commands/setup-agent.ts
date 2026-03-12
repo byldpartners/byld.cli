@@ -1,23 +1,13 @@
 import inquirer from "inquirer";
 import chalk from "chalk";
 import { execSync } from "child_process";
-import { mkdirSync, writeFileSync, existsSync, rmSync } from "fs";
-import { join } from "path";
+import { mkdirSync, existsSync, rmSync, readdirSync, readFileSync, copyFileSync, statSync } from "fs";
+import { join, basename } from "path";
 import { displayExitMessage } from "../utils/branding.js";
 import { logger } from "../utils/logger.js";
 
 const REPO_URL = "https://github.com/affaan-m/everything-claude-code.git";
 const REPO_NAME = "everything-claude-code";
-
-const LANGUAGE_STACKS = [
-  { name: "TypeScript / JavaScript", value: "typescript" },
-  { name: "Python", value: "python" },
-  { name: "Go", value: "golang" },
-  { name: "Swift", value: "swift" },
-  { name: "Kotlin", value: "kotlin" },
-  { name: "PHP", value: "php" },
-  { name: "Perl", value: "perl" },
-];
 
 async function safePrompt<T extends Record<string, any>>(prompt: any): Promise<T> {
   try {
@@ -36,10 +26,67 @@ async function safePrompt<T extends Record<string, any>>(prompt: any): Promise<T
 }
 
 function cloneRepo(tmpDir: string): void {
-  logger.info("Fetching latest rules from everything-claude-code...");
+  logger.info("Fetching latest rules and skills from everything-claude-code...");
   execSync(`git clone --depth 1 ${REPO_URL} "${tmpDir}"`, {
     stdio: "pipe",
   });
+}
+
+function formatDisplayName(dirName: string): string {
+  return dirName
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function discoverRuleCategories(tmpDir: string): { name: string; value: string }[] {
+  const rulesDir = join(tmpDir, "rules");
+  if (!existsSync(rulesDir)) return [];
+  return readdirSync(rulesDir)
+    .filter((entry) => {
+      const full = join(rulesDir, entry);
+      return statSync(full).isDirectory();
+    })
+    .map((dir) => ({ name: formatDisplayName(dir), value: dir }));
+}
+
+function discoverRuleFiles(tmpDir: string, category: string): { name: string; value: string }[] {
+  const categoryDir = join(tmpDir, "rules", category);
+  if (!existsSync(categoryDir)) return [];
+  return readdirSync(categoryDir)
+    .filter((f) => f.endsWith(".md"))
+    .map((f) => {
+      const displayName = formatDisplayName(f.replace(/\.md$/, ""));
+      return { name: displayName, value: f };
+    });
+}
+
+function parseSkillDescription(skillDir: string): string | null {
+  const skillMd = join(skillDir, "SKILL.md");
+  if (!existsSync(skillMd)) return null;
+  const content = readFileSync(skillMd, "utf-8");
+  const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
+  if (!match) return null;
+  const descMatch = match[1].match(/description:\s*(.+)/);
+  return descMatch ? descMatch[1].trim() : null;
+}
+
+function discoverSkills(tmpDir: string): { name: string; value: string }[] {
+  const skillsDir = join(tmpDir, "skills");
+  if (!existsSync(skillsDir)) return [];
+  return readdirSync(skillsDir)
+    .filter((entry) => {
+      const full = join(skillsDir, entry);
+      return statSync(full).isDirectory() && existsSync(join(full, "SKILL.md"));
+    })
+    .map((dir) => {
+      const desc = parseSkillDescription(join(skillsDir, dir));
+      const displayName = formatDisplayName(dir);
+      return {
+        name: desc ? `${displayName} - ${chalk.gray(desc)}` : displayName,
+        value: dir,
+      };
+    });
 }
 
 function copyDir(src: string, dest: string): void {
@@ -63,87 +110,145 @@ export async function setupAgentCommand(): Promise<void> {
     if (!proceed) return;
   }
 
-  // Select language stacks
-  const { stacks } = await safePrompt<{ stacks: string[] }>([
-    {
-      type: "checkbox",
-      name: "stacks",
-      message: "Select language stacks to include (common rules are always added):",
-      choices: LANGUAGE_STACKS,
-    },
-  ]);
-
-  // Ask about hooks
-  const { includeHooks } = await safePrompt<{ includeHooks: boolean }>([
-    {
-      type: "confirm",
-      name: "includeHooks",
-      message: "Include hooks (session lifecycle, strategic compaction)?",
-      default: false,
-    },
-  ]);
-
-  // Ask about MCP configs
-  const { includeMcp } = await safePrompt<{ includeMcp: boolean }>([
-    {
-      type: "confirm",
-      name: "includeMcp",
-      message: "Include MCP server configs (GitHub, Supabase, Vercel, Railway)?",
-      default: false,
-    },
-  ]);
-
-  // Summary
-  console.log();
-  logger.info("Setup summary:");
-  logger.cyan("  Rules:  common" + (stacks.length > 0 ? `, ${stacks.join(", ")}` : ""));
-  logger.cyan(`  Hooks:  ${includeHooks ? "yes" : "no"}`);
-  logger.cyan(`  MCP:    ${includeMcp ? "yes" : "no"}`);
-  console.log();
-
-  const { confirm } = await safePrompt<{ confirm: boolean }>([
-    {
-      type: "confirm",
-      name: "confirm",
-      message: "Proceed with setup?",
-      default: true,
-    },
-  ]);
-
-  if (!confirm) {
-    logger.info("Setup cancelled.");
-    return;
-  }
-
-  // Clone to temp directory
+  // Clone to temp directory first so we can discover what's available
   const tmpDir = join(projectDir, `.tmp-${REPO_NAME}-${Date.now()}`);
   try {
     cloneRepo(tmpDir);
 
-    // Always copy common rules
-    const rulesDir = join(projectDir, ".claude", "rules");
-    mkdirSync(rulesDir, { recursive: true });
+    // --- Rules selection ---
+    const ruleCategories = discoverRuleCategories(tmpDir);
+    let selectedRuleFiles: { category: string; file: string }[] = [];
 
-    const commonSrc = join(tmpDir, "rules", "common");
-    if (existsSync(commonSrc)) {
-      copyDir(commonSrc, rulesDir);
-      logger.success("Added common rules");
-    } else {
-      logger.warn("Common rules not found in repo");
-    }
+    if (ruleCategories.length > 0) {
+      const { categories } = await safePrompt<{ categories: string[] }>([
+        {
+          type: "checkbox",
+          name: "categories",
+          message: "Select rule categories to browse:",
+          choices: ruleCategories,
+        },
+      ]);
 
-    // Copy selected language stacks
-    for (const stack of stacks) {
-      const stackSrc = join(tmpDir, "rules", stack);
-      if (existsSync(stackSrc)) {
-        copyDir(stackSrc, rulesDir);
-        logger.success(`Added ${stack} rules`);
-      } else {
-        logger.warn(`${stack} rules not found in repo (may have been renamed)`);
+      // For each selected category, let user pick individual rule files
+      for (const category of categories) {
+        const ruleFiles = discoverRuleFiles(tmpDir, category);
+        if (ruleFiles.length === 0) continue;
+
+        const { files } = await safePrompt<{ files: string[] }>([
+          {
+            type: "checkbox",
+            name: "files",
+            message: `Select ${formatDisplayName(category)} rules to include:`,
+            choices: ruleFiles,
+            default: ruleFiles.map((f) => f.value), // all selected by default
+          },
+        ]);
+
+        for (const file of files) {
+          selectedRuleFiles.push({ category, file });
+        }
       }
     }
 
-    // Copy hooks
+    // --- Skills selection ---
+    const availableSkills = discoverSkills(tmpDir);
+    let selectedSkills: string[] = [];
+
+    if (availableSkills.length > 0) {
+      const { skills } = await safePrompt<{ skills: string[] }>([
+        {
+          type: "checkbox",
+          name: "skills",
+          message: `Select skills to install (${availableSkills.length} available):`,
+          choices: availableSkills,
+        },
+      ]);
+      selectedSkills = skills;
+    }
+
+    // --- Hooks ---
+    const { includeHooks } = await safePrompt<{ includeHooks: boolean }>([
+      {
+        type: "confirm",
+        name: "includeHooks",
+        message: "Include hooks (session lifecycle, strategic compaction)?",
+        default: false,
+      },
+    ]);
+
+    // --- MCP configs ---
+    const { includeMcp } = await safePrompt<{ includeMcp: boolean }>([
+      {
+        type: "confirm",
+        name: "includeMcp",
+        message: "Include MCP server configs?",
+        default: false,
+      },
+    ]);
+
+    // Summary
+    console.log();
+    logger.info("Setup summary:");
+    if (selectedRuleFiles.length > 0) {
+      logger.cyan(`  Rules:  ${selectedRuleFiles.length} file(s) from ${[...new Set(selectedRuleFiles.map((r) => r.category))].join(", ")}`);
+    } else {
+      logger.cyan("  Rules:  none");
+    }
+    if (selectedSkills.length > 0) {
+      logger.cyan(`  Skills: ${selectedSkills.join(", ")}`);
+    } else {
+      logger.cyan("  Skills: none");
+    }
+    logger.cyan(`  Hooks:  ${includeHooks ? "yes" : "no"}`);
+    logger.cyan(`  MCP:    ${includeMcp ? "yes" : "no"}`);
+    console.log();
+
+    if (selectedRuleFiles.length === 0 && selectedSkills.length === 0 && !includeHooks && !includeMcp) {
+      logger.info("Nothing selected. Setup cancelled.");
+      return;
+    }
+
+    const { confirm } = await safePrompt<{ confirm: boolean }>([
+      {
+        type: "confirm",
+        name: "confirm",
+        message: "Proceed with setup?",
+        default: true,
+      },
+    ]);
+
+    if (!confirm) {
+      logger.info("Setup cancelled.");
+      return;
+    }
+
+    // --- Install rules ---
+    if (selectedRuleFiles.length > 0) {
+      const rulesDir = join(projectDir, ".claude", "rules");
+      mkdirSync(rulesDir, { recursive: true });
+
+      for (const { category, file } of selectedRuleFiles) {
+        const src = join(tmpDir, "rules", category, file);
+        copyFileSync(src, join(rulesDir, file));
+      }
+      logger.success(`Added ${selectedRuleFiles.length} rule file(s)`);
+    }
+
+    // --- Install skills ---
+    if (selectedSkills.length > 0) {
+      const skillsDir = join(projectDir, ".claude", "skills");
+      mkdirSync(skillsDir, { recursive: true });
+
+      for (const skill of selectedSkills) {
+        const src = join(tmpDir, "skills", skill);
+        const dest = join(skillsDir, skill);
+        mkdirSync(dest, { recursive: true });
+        copyDir(src, dest);
+      }
+      logger.success(`Added ${selectedSkills.length} skill(s)`);
+    }
+
+    // --- Install hooks ---
     if (includeHooks) {
       const hooksSrc = join(tmpDir, "hooks");
       if (existsSync(hooksSrc)) {
@@ -156,7 +261,7 @@ export async function setupAgentCommand(): Promise<void> {
       }
     }
 
-    // Copy MCP configs
+    // --- Install MCP configs ---
     if (includeMcp) {
       const mcpSrc = join(tmpDir, "mcp-configs");
       if (existsSync(mcpSrc)) {
@@ -171,7 +276,8 @@ export async function setupAgentCommand(): Promise<void> {
 
     console.log();
     logger.success("Agent harness setup complete!");
-    logger.info(`Rules installed to ${chalk.cyan(".claude/rules/")}`);
+    if (selectedRuleFiles.length > 0) logger.info(`Rules installed to ${chalk.cyan(".claude/rules/")}`);
+    if (selectedSkills.length > 0) logger.info(`Skills installed to ${chalk.cyan(".claude/skills/")}`);
     if (includeHooks) logger.info(`Hooks installed to ${chalk.cyan(".claude/hooks/")}`);
     if (includeMcp) logger.info(`MCP configs installed to ${chalk.cyan(".claude/mcp-configs/")}`);
     console.log();
@@ -184,7 +290,6 @@ export async function setupAgentCommand(): Promise<void> {
     }
     process.exit(1);
   } finally {
-    // Clean up temp directory
     if (existsSync(tmpDir)) {
       rmSync(tmpDir, { recursive: true, force: true });
     }
