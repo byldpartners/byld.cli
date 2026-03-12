@@ -4,11 +4,9 @@
 
 Byld is a software agency, offering premium senior software developers and designers for innovative software products.
 
-# Byld CLI
+# @byldpartners/cli
 
-**Build better. Build faster. Build with Byld.**
-
-Visit [https://byld.dev](https://byld.dev) to learn more about our software agency.
+CLI tool for scaffolding new projects with curated full-stack presets. A wrapper around [create-better-t-stack](https://www.better-t-stack.dev) with Byld's opinionated configurations, custom GitHub Actions, and additional package support.
 
 ## Installation
 
