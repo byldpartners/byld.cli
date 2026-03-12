@@ -17,11 +17,7 @@ export function scaffoldUIPackage(
   options: UIPackageOptions
 ): void {
   const uiDir = join(projectDirectory, "packages", "ui");
-
-  if (existsSync(uiDir)) {
-    logger.warn("packages/ui already exists, skipping UI package scaffold");
-    return;
-  }
+  const alreadyExists = existsSync(uiDir);
 
   mkdirSync(join(uiDir, "src", "components"), { recursive: true });
 
@@ -136,7 +132,7 @@ export * from "./components/index.native.js";
   // Scaffold an example component
   scaffoldExampleComponent(uiDir, options.platform);
 
-  logger.success("Created packages/ui with @byldpartners/ui");
+  logger.success(alreadyExists ? "Configured packages/ui with @byldpartners/ui" : "Created packages/ui with @byldpartners/ui");
 
   // Run the @byldpartners/ui init CLI for platform setup
   runUIInit(uiDir, options);

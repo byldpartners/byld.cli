@@ -84,6 +84,25 @@ After selecting your stack, you can optionally add:
 
 The CLI will prompt you interactively for these additions.
 
+### Agent Setup
+
+During project creation, you'll be prompted to set up Claude Code agent configurations. This integrates the `setup-agent` command directly into the create flow, so you don't need to run it separately.
+
+When enabled, you can interactively select:
+
+- **Rules** - Agent behavior rules organized by category
+- **Skills** - Reusable agent skills with descriptions
+- **Hooks** - Session lifecycle and strategic compaction hooks
+- **MCP configs** - Model Context Protocol server configurations
+
+All selected items are installed to the `.claude/` directory inside your new project.
+
+You can also run agent setup independently on any existing project:
+
+```bash
+byld setup-agent
+```
+
 ### Example Workflow
 
 ```bash
@@ -97,7 +116,8 @@ byld create my-awesome-app
 # 1. Choose "Use a Byld preset" or "Custom stack"
 # 2. If preset, select from available presets
 # 3. Optionally add custom GitHub Actions or packages
-# 4. Wait for project creation to complete
+# 4. Optionally set up Claude Code agent (rules, skills, hooks, MCP configs)
+# 5. Wait for project creation to complete
 
 # Navigate to your project
 cd my-awesome-app
@@ -115,6 +135,12 @@ Create a new project with the specified name (or be prompted for it).
 **Aliases**: `byld c`
 
 **Options**: None (all configuration is done interactively)
+
+### `byld setup-agent`
+
+Interactively set up Claude Code agent rules, skills, hooks, and MCP configs for the current project directory.
+
+**Aliases**: `byld sa`
 
 ### `byld help`
 

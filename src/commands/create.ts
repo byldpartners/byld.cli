@@ -5,6 +5,7 @@ import { displayExitMessage } from "../utils/branding.js";
 import { logger } from "../utils/logger.js";
 import { applyCustomAdditions, CustomAdditions } from "../utils/custom-additions.js";
 import { scaffoldUIPackage, UIPlatform } from "../utils/ui-package.js";
+import { setupAgentCommand } from "./setup-agent.js";
 import chalk from "chalk";
 import {
   FRONTEND_VALUES,
@@ -116,6 +117,20 @@ export async function createCommand(projectName?: string): Promise<void> {
           packageManager: "pnpm",
           install: config.install ?? true,
         });
+      }
+
+      // Prompt for agent setup
+      const { setupAgent } = await safePrompt<{ setupAgent: boolean }>([
+        {
+          type: "confirm",
+          name: "setupAgent",
+          message: "Set up Claude Code agent (rules, skills, hooks, MCP configs)?",
+          default: false,
+        },
+      ]);
+
+      if (setupAgent) {
+        await setupAgentCommand(projectDirectory);
       }
 
       console.log();

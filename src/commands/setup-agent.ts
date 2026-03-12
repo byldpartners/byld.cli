@@ -93,11 +93,11 @@ function copyDir(src: string, dest: string): void {
   execSync(`cp -r "${src}/." "${dest}/"`, { stdio: "pipe" });
 }
 
-export async function setupAgentCommand(): Promise<void> {
-  const projectDir = process.cwd();
+export async function setupAgentCommand(targetDir?: string): Promise<void> {
+  const projectDir = targetDir || process.cwd();
 
-  // Check if we're in a project directory
-  if (!existsSync(join(projectDir, "package.json")) && !existsSync(join(projectDir, ".git"))) {
+  // Check if we're in a project directory (skip when called with explicit targetDir)
+  if (!targetDir && !existsSync(join(projectDir, "package.json")) && !existsSync(join(projectDir, ".git"))) {
     logger.warn("No package.json or .git found. Are you in a project directory?");
     const { proceed } = await safePrompt<{ proceed: boolean }>([
       {
