@@ -4,7 +4,7 @@ import { CreateInput } from "../types.js";
 import { displayExitMessage } from "../utils/branding.js";
 import { logger } from "../utils/logger.js";
 import { applyCustomAdditions, CustomAdditions } from "../utils/custom-additions.js";
-import { scaffoldUIPackage, UIPlatform } from "../utils/ui-package.js";
+
 import { setupAgentCommand } from "./setup-agent.js";
 import chalk from "chalk";
 import {
@@ -107,16 +107,6 @@ export async function createCommand(projectName?: string): Promise<void> {
 
       if (customAdditions.githubActions || customAdditions.packages) {
         await applyCustomAdditions(projectDirectory, customAdditions);
-      }
-
-      // Prompt for UI package
-      const uiOptions = await promptUIPackage();
-      if (uiOptions) {
-        scaffoldUIPackage(projectDirectory, config.projectName || "my-app", {
-          ...uiOptions,
-          packageManager: "pnpm",
-          install: config.install ?? true,
-        });
       }
 
       // Prompt for agent setup
@@ -416,31 +406,5 @@ async function promptCustomAdditions(): Promise<CustomAdditions | null> {
   return additions;
 }
 
-async function promptUIPackage(): Promise<{ platform: UIPlatform } | null> {
-  const { addUI } = await safePrompt<{ addUI: boolean }>([
-    {
-      type: "confirm",
-      name: "addUI",
-      message: "Add a UI package (@byldpartners/ui) for building shared components?",
-      default: false,
-    },
-  ]);
 
-  if (!addUI) return null;
-
-  const { platform } = await safePrompt<{ platform: UIPlatform }>([
-    {
-      type: "rawlist",
-      name: "platform",
-      message: "Which platforms will this UI package target?",
-      choices: [
-        { name: "Web only (React + Tailwind)", value: "web" },
-        { name: "Native only (React Native + Expo)", value: "native" },
-        { name: "Both web and native", value: "both" },
-      ],
-    },
-  ]);
-
-  return { platform };
-}
 
