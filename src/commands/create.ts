@@ -112,7 +112,7 @@ export async function createCommand(projectName?: string): Promise<void> {
       // Prompt for UI package
       const uiOptions = await promptUIPackage();
       if (uiOptions) {
-        scaffoldUIPackage(projectDirectory, {
+        scaffoldUIPackage(projectDirectory, config.projectName || "my-app", {
           ...uiOptions,
           packageManager: "pnpm",
           install: config.install ?? true,

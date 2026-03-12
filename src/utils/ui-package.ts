@@ -14,6 +14,7 @@ export interface UIPackageOptions {
 
 export function scaffoldUIPackage(
   projectDirectory: string,
+  projectName: string,
   options: UIPackageOptions
 ): void {
   const uiDir = join(projectDirectory, "packages", "ui");
@@ -23,7 +24,7 @@ export function scaffoldUIPackage(
 
   // package.json
   const pkg: Record<string, any> = {
-    name: "@app/ui",
+    name: `@${projectName}/ui`,
     version: "0.0.1",
     private: true,
     type: "module",
