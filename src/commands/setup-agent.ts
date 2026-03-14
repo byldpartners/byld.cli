@@ -26,7 +26,7 @@ async function safePrompt<T extends Record<string, any>>(prompt: any): Promise<T
 }
 
 function cloneRepo(tmpDir: string): void {
-  logger.info("Fetching latest rules and skills from everything-claude-code...");
+  logger.info("Fetching latest rules, skills, and agents from everything-claude-code...");
   execSync(`git clone --depth 1 ${REPO_URL} "${tmpDir}"`, {
     stdio: "pipe",
   });
@@ -85,6 +85,29 @@ function discoverSkills(tmpDir: string): { name: string; value: string }[] {
       return {
         name: desc ? `${displayName} - ${chalk.gray(desc)}` : displayName,
         value: dir,
+      };
+    });
+}
+
+function parseAgentDescription(agentFile: string): string | null {
+  const content = readFileSync(agentFile, "utf-8");
+  const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
+  if (!match) return null;
+  const descMatch = match[1].match(/description:\s*(.+)/);
+  return descMatch ? descMatch[1].trim() : null;
+}
+
+function discoverAgents(tmpDir: string): { name: string; value: string }[] {
+  const agentsDir = join(tmpDir, "agents");
+  if (!existsSync(agentsDir)) return [];
+  return readdirSync(agentsDir)
+    .filter((f) => f.endsWith(".md"))
+    .map((f) => {
+      const desc = parseAgentDescription(join(agentsDir, f));
+      const displayName = formatDisplayName(f.replace(/\.md$/, ""));
+      return {
+        name: desc ? `${displayName} - ${chalk.gray(desc)}` : displayName,
+        value: f,
       };
     });
 }
@@ -166,6 +189,22 @@ export async function setupAgentCommand(targetDir?: string): Promise<void> {
       selectedSkills = skills;
     }
 
+    // --- Agents selection ---
+    const availableAgents = discoverAgents(tmpDir);
+    let selectedAgents: string[] = [];
+
+    if (availableAgents.length > 0) {
+      const { agents } = await safePrompt<{ agents: string[] }>([
+        {
+          type: "checkbox",
+          name: "agents",
+          message: `Select agents to install (${availableAgents.length} available):`,
+          choices: availableAgents,
+        },
+      ]);
+      selectedAgents = agents;
+    }
+
     // --- Hooks ---
     const { includeHooks } = await safePrompt<{ includeHooks: boolean }>([
       {
@@ -195,15 +234,20 @@ export async function setupAgentCommand(targetDir?: string): Promise<void> {
       logger.cyan("  Rules:  none");
     }
     if (selectedSkills.length > 0) {
-      logger.cyan(`  Skills: ${selectedSkills.join(", ")}`);
+      logger.cyan(`  Skills:  ${selectedSkills.join(", ")}`);
     } else {
-      logger.cyan("  Skills: none");
+      logger.cyan("  Skills:  none");
     }
-    logger.cyan(`  Hooks:  ${includeHooks ? "yes" : "no"}`);
-    logger.cyan(`  MCP:    ${includeMcp ? "yes" : "no"}`);
+    if (selectedAgents.length > 0) {
+      logger.cyan(`  Agents:  ${selectedAgents.map((f) => f.replace(/\.md$/, "")).join(", ")}`);
+    } else {
+      logger.cyan("  Agents:  none");
+    }
+    logger.cyan(`  Hooks:   ${includeHooks ? "yes" : "no"}`);
+    logger.cyan(`  MCP:     ${includeMcp ? "yes" : "no"}`);
     console.log();
 
-    if (selectedRuleFiles.length === 0 && selectedSkills.length === 0 && !includeHooks && !includeMcp) {
+    if (selectedRuleFiles.length === 0 && selectedSkills.length === 0 && selectedAgents.length === 0 && !includeHooks && !includeMcp) {
       logger.info("Nothing selected. Setup cancelled.");
       return;
     }
@@ -248,6 +292,18 @@ export async function setupAgentCommand(targetDir?: string): Promise<void> {
       logger.success(`Added ${selectedSkills.length} skill(s)`);
     }
 
+    // --- Install agents ---
+    if (selectedAgents.length > 0) {
+      const agentsDir = join(projectDir, ".claude", "agents");
+      mkdirSync(agentsDir, { recursive: true });
+
+      for (const agent of selectedAgents) {
+        const src = join(tmpDir, "agents", agent);
+        copyFileSync(src, join(agentsDir, agent));
+      }
+      logger.success(`Added ${selectedAgents.length} agent(s)`);
+    }
+
     // --- Install hooks ---
     if (includeHooks) {
       const hooksSrc = join(tmpDir, "hooks");
@@ -278,6 +334,7 @@ export async function setupAgentCommand(targetDir?: string): Promise<void> {
     logger.success("Agent harness setup complete!");
     if (selectedRuleFiles.length > 0) logger.info(`Rules installed to ${chalk.cyan(".claude/rules/")}`);
     if (selectedSkills.length > 0) logger.info(`Skills installed to ${chalk.cyan(".claude/skills/")}`);
+    if (selectedAgents.length > 0) logger.info(`Agents installed to ${chalk.cyan(".claude/agents/")}`);
     if (includeHooks) logger.info(`Hooks installed to ${chalk.cyan(".claude/hooks/")}`);
     if (includeMcp) logger.info(`MCP configs installed to ${chalk.cyan(".claude/mcp-configs/")}`);
     console.log();
