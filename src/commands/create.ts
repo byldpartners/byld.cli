@@ -95,7 +95,7 @@ export async function createCommand(projectName?: string): Promise<void> {
     // Unwrap the result — create-better-t-stack may return either:
     //   { success, projectDirectory, relativePath, error }
     //   { status: "ok", value: { success, projectDirectory, relativePath, ... } }
-    const raw = (result ?? {}) as Record<string, unknown>;
+    const raw = (result ?? {}) as unknown as Record<string, unknown>;
     const inner = (raw.status === "ok" && raw.value ? raw.value : raw) as Record<string, unknown>;
     const success = inner.success === true;
     const projectDirectory = (inner.projectDirectory as string) || "";
