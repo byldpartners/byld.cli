@@ -48,7 +48,58 @@ async function safePrompt<T extends Record<string, any>>(prompt: any): Promise<T
   }
 }
 
-export async function createCommand(projectName?: string): Promise<void> {
+export async function createCommand(projectName?: string, yes?: boolean): Promise<void> {
+  if (yes) {
+    const preset = getPresetByName("Minimal Stack");
+    if (!preset) {
+      logger.error("Minimal Stack preset not found");
+      process.exit(1);
+    }
+    const config: CreateInput = {
+      ...preset.config,
+      projectName: projectName || "test-project",
+    };
+
+    logger.info("Creating your project with Minimal Stack defaults...");
+
+    try {
+      const { create } = await import("create-better-t-stack");
+      const result = await create(config.projectName || "test-project", {
+        ...config,
+        yes: true,
+        yolo: true,
+        disableAnalytics: true,
+        renderTitle: false,
+      });
+
+      const raw = (result ?? {}) as unknown as Record<string, unknown>;
+      const inner = (raw.status === "ok" && raw.value ? raw.value : raw) as Record<string, unknown>;
+      const success = inner.success === true;
+      const projectDirectory = (inner.projectDirectory as string) || "";
+      const relativePath = (inner.relativePath as string) || "";
+      const error = (inner.error as string) || undefined;
+
+      if (success && projectDirectory) {
+        logger.success(`Project created at: ${chalk.cyan(projectDirectory)}`);
+        console.log();
+        logger.info("Next steps:");
+        logger.cyan(`  cd ${relativePath}`);
+        if (!config.install) {
+          logger.cyan(`  pnpm install`);
+        }
+        logger.cyan(`  pnpm run dev`);
+        console.log();
+      } else {
+        logger.error(`Failed to create project: ${error || JSON.stringify(raw)}`);
+        process.exit(1);
+      }
+    } catch (error) {
+      logger.error(`Error creating project: ${error}`);
+      process.exit(1);
+    }
+    return;
+  }
+
   const { usePreset } = await safePrompt<{ usePreset: boolean }>([
     {
       type: "rawlist",

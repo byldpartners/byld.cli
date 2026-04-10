@@ -48,10 +48,11 @@ program
   .alias("c")
   .description("Create a new project")
   .argument("[project-name]", "Name of the project")
-  .action(async (projectName?: string) => {
+  .option("-y, --yes", "Skip all prompts and use Minimal Stack defaults")
+  .action(async (projectName?: string, options?: { yes?: boolean }) => {
     displayBranding();
     await checkForUpdates();
-    await createCommand(projectName);
+    await createCommand(projectName, options?.yes);
   });
 
 program
